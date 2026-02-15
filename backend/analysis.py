@@ -6,7 +6,9 @@ from models import StockAnalysis, TradeSignal
 # Default list of stocks to scan (Major US/Indian stocks mix for demo)
 STOCKS_TO_SCAN = [
     "RELIANCE.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS", "ICICIBANK.NS",
-    "SBIN.NS", "BHARTIARTL.NS", "ITC.NS", "HINDUNILVR.NS", "LICI.NS"
+    "SBIN.NS", "BHARTIARTL.NS", "ITC.NS", "HINDUNILVR.NS", "LICI.NS",
+    "TATAMOTORS.NS", "MARUTI.NS", "SUNPHARMA.NS", "AXISBANK.NS", "BAJFINANCE.NS",
+    "ONGC.NS", "NTPC.NS", "POWERGRID.NS", "TITAN.NS", "ULTRACEMCO.NS"
 ]
 
 def analyze_stock_df(symbol: str, df: pd.DataFrame) -> StockAnalysis:
@@ -85,6 +87,21 @@ def analyze_stock_df(symbol: str, df: pd.DataFrame) -> StockAnalysis:
         stop_loss = 0.0
         target_price = 0.0
 
+    # Prepare history for chart (last 50 candles)
+    history = []
+    # Ensure index is datetime
+    if not isinstance(df.index, pd.DatetimeIndex):
+        df.index = pd.to_datetime(df.index)
+        
+    for index, row in df.tail(50).iterrows():
+        history.append({
+            "time": index.strftime("%H:%M") if index.date() == pd.Timestamp.now().date() else index.strftime("%Y-%m-%d %H:%M"),
+            "close": round(row['Close'], 2),
+            "open": round(row['Open'], 2),
+            "high": round(row['High'], 2),
+            "low": round(row['Low'], 2)
+        })
+
     return StockAnalysis(
         symbol=symbol,
         current_price=round(current_price, 2),
@@ -98,7 +115,8 @@ def analyze_stock_df(symbol: str, df: pd.DataFrame) -> StockAnalysis:
         stop_loss=round(stop_loss, 2),
         rsi=round(rsi, 2),
         macd=round(macd_val, 2),
-        trend=trend
+        trend=trend,
+        history=history
     )
 
 def analyze_market():
@@ -127,11 +145,22 @@ def analyze_market():
          
     return results
 
-def analyze_single_stock(symbol: str):
+def analyze_single_stock(symbol: str, interval: str = "15m"):
      # Fallback/Single stock analysis
      try:
+        # Map interval to appropriate period?
+        # yfinance period mapping: 
+        # 1m,2m,5m,15m,30m,60m,90m,1h -> 7d (max for 1m), but safe default 5d?
+        # 1d,5d,1wk,1mo,3mo -> max or 1y?
+        
+        period = "5d"
+        if interval in ["1d", "5d", "1wk", "1mo", "3mo"]:
+             period = "1y"
+        elif interval in ["60m", "1h"]:
+             period = "1mo" # 730 days max for hourly
+             
         # Use yf.download for consistency
-        df = yf.download(symbol, period="5d", interval="15m", progress=False)
+        df = yf.download(symbol, period=period, interval=interval, progress=False)
         
         # Check if df is multi-index (happens if symbol is list or sometimes with recent yfinance)
         if isinstance(df.columns, pd.MultiIndex):
@@ -146,7 +175,63 @@ def analyze_single_stock(symbol: str):
         if df.empty:
             return None
             
-        return analyze_stock_df(symbol, df)
+        # Analyze dataframe
+        analysis_result = analyze_stock_df(symbol, df)
+        
+        # Fetch News (separately to not block analysis?)
+        # Ticker object needed for news
+        try:
+             ticker = yf.Ticker(symbol)
+             news = ticker.news
+             if news:
+                 # Standardize news format
+                 formatted_news = []
+                 for n in news[:5]: # Top 5 news
+                     formatted_news.append({
+                         "title": n.get('title'),
+                         "link": n.get('link'),
+                         "publisher": n.get('publisher'),
+                         "thumbnail": n.get('thumbnail') 
+                     })
+                 analysis_result.news = formatted_news
+        except Exception as e:
+             # print(f"Error fetching news for {symbol}: {e}")
+             pass
+             
+        return analysis_result
+
      except Exception as e:
          print(f"Error fetching {symbol}: {e}")
          return None
+
+
+def scan_for_next_day_picks():
+    picks = []
+    try:
+        # Bulk download for 1d interval
+        tickers_str = " ".join(STOCKS_TO_SCAN)
+        data = yf.download(tickers_str, period="60d", interval="1d", group_by='ticker', threads=True, progress=False)
+        
+        for symbol in STOCKS_TO_SCAN:
+            try:
+                stock_df = data[symbol].copy()
+                stock_df.dropna(subset=['Close'], inplace=True)
+                
+                if len(stock_df) < 50: continue
+
+                # Analyze on daily timeframe
+                analysis = analyze_stock_df(symbol, stock_df)
+                
+                # Check for BUY signals and strong technicals
+                if analysis.signal.action == "BUY" and analysis.trend == "UP":
+                     picks.append(analysis)
+                elif analysis.rsi < 35: # Oversold opportunity
+                     picks.append(analysis)
+                     
+            except Exception as e:
+                print(f"Error scanning {symbol}: {e}")
+                
+    except Exception as e:
+         print(f"Daily scan failed: {e}")
+         
+    return picks

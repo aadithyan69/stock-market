@@ -9,8 +9,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- ApexCharts -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <link rel="stylesheet" href="/static/style.css">
     <script>
         tailwind.config = {
@@ -65,6 +65,17 @@
             </div>
         </div>
 
+        <!-- Top Picks Section -->
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold mb-4 flex items-center">
+                <i class="fa-solid fa-rocket text-yellow-500 mr-2"></i>
+                Top Picks for Tomorrow
+            </h2>
+            <div id="recommendations-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="col-span-full text-gray-400 text-sm">Loading recommendations...</div>
+            </div>
+        </div>
+
         <!-- Stock Cards Grid -->
         <div id="stock-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             <!-- Loading State -->
@@ -109,10 +120,42 @@
                     </div>
 
                     <div class="mb-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-semibold">Price Chart</h3>
+                            <div class="flex gap-2">
+                                <select id="chart-interval" onchange="updateChart()"
+                                    class="bg-gray-700 text-white text-sm rounded px-2 py-1 outline-none">
+                                    <option value="5m">5m</option>
+                                    <option value="15m" selected>15m</option>
+                                    <option value="1h">1h</option>
+                                    <option value="1d">1d</option>
+                                    <option value="1wk">1wk</option>
+                                </select>
+                                <select id="chart-type" onchange="updateChart()"
+                                    class="bg-gray-700 text-white text-sm rounded px-2 py-1 outline-none">
+                                    <option value="candlestick" selected>Candle</option>
+                                    <option value="area">Line</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="bg-gray-700/30 p-4 rounded-lg h-[400px]">
+                            <div id="stockChart" class="w-full h-full"></div>
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
                         <h3 class="text-lg font-semibold mb-4">Analysis Reasons</h3>
                         <ul id="detail-reasons" class="list-disc list-inside text-gray-300 space-y-1">
                             <!-- Reasons populated by JS -->
                         </ul>
+                    </div>
+
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold mb-4">Latest News</h3>
+                        <div id="detail-news" class="space-y-3">
+                            <!-- News items populated by JS -->
+                            <p class="text-gray-400 text-sm">No news available.</p>
+                        </div>
                     </div>
 
                     <div class="mb-6">

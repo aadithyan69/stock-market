@@ -19,6 +19,8 @@ class StockAnalysis(BaseModel):
     rsi: float
     macd: float
     trend: str # "UP", "DOWN", "SIDEWAYS"
+    history: List[dict] = [] # List of {time: str, close: float}
+    news: List[dict] = [] # List of {title: str, link: str, publisher: str, thumbnail: Optional[dict]}
 
 class StockListResponse(BaseModel):
     stocks: List[StockAnalysis]

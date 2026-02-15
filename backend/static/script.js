@@ -74,9 +74,70 @@ function renderStocks(stocks) {
     });
 }
 
+
+let stockChart = null;
+let currentSymbol = null;
+
 function showDetail(stock) {
     const modal = document.getElementById('detail-view');
+    currentSymbol = stock.symbol; // Store for updates
 
+    // Set Interval Dropdown to default 15m or keep previous? 
+    // Let's reset to 15m on new stock open
+    document.getElementById('chart-interval').value = "15m";
+    document.getElementById('chart-type').value = "candlestick";
+
+    updateModalContent(stock);
+
+    // Render Chart
+    renderChart(stock);
+
+    // Show Modal
+    modal.classList.remove('hidden');
+}
+
+
+// Recommendations Logic
+async function fetchRecommendations() {
+    const grid = document.getElementById('recommendations-grid');
+    if (!grid) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/recommendations`);
+        if (!response.ok) throw new Error('Failed to load');
+        const data = await response.json();
+
+        if (data.stocks.length === 0) {
+            grid.innerHTML = '<div class="col-span-full text-gray-500 text-sm italic">No strong buy signals for tomorrow found.</div>';
+            return;
+        }
+
+        grid.innerHTML = '';
+        data.stocks.forEach(stock => {
+            const card = document.createElement('div');
+            card.className = 'bg-gray-800 rounded-lg p-4 border border-gray-700 hover:bg-gray-750 cursor-pointer transition';
+            card.onclick = () => showDetail(stock);
+
+            card.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <h4 class="font-bold text-blue-400">${stock.symbol.replace('.NS', '')}</h4>
+                    <span class="text-green-400 text-xs font-bold uppercase">${stock.signal.action}</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="text-white">₹${stock.current_price}</span>
+                    <span class="text-gray-400">Target: ₹${stock.target_price}</span>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+
+    } catch (error) {
+        console.error("Error loading recommendations:", error);
+        grid.innerHTML = '<div class="col-span-full text-red-400 text-sm">Failed to load recommendations.</div>';
+    }
+}
+
+function updateModalContent(stock) {
     // Populate Modal Data
     document.getElementById('detail-symbol').textContent = stock.symbol.replace('.NS', '');
     document.getElementById('detail-price').textContent = `₹${stock.current_price}`;
@@ -102,12 +163,152 @@ function showDetail(stock) {
     document.getElementById('detail-macd').textContent = stock.macd;
     document.getElementById('detail-trend').textContent = stock.trend;
 
-    // Show Modal
-    modal.classList.remove('hidden');
+    // News
+    const newsContainer = document.getElementById('detail-news');
+    if (stock.news && stock.news.length > 0) {
+        newsContainer.innerHTML = stock.news.map(n => `
+            <a href="${n.link}" target="_blank" class="block bg-gray-700/50 p-3 rounded hover:bg-gray-700 transition">
+                <h4 class="text-blue-400 font-semibold text-sm mb-1">${n.title}</h4>
+                <div class="flex justify-between text-xs text-gray-500">
+                    <span>${n.publisher}</span>
+                    <i class="fa-solid fa-external-link-alt"></i>
+                </div>
+            </a>
+        `).join('');
+    } else {
+        newsContainer.innerHTML = '<p class="text-gray-400 text-sm italic">No recent news found.</p>';
+    }
 }
+
+async function updateChart() {
+    const interval = document.getElementById('chart-interval').value;
+    // const chartType is handled in renderChart or we just re-fetch data if needed?
+    // Changing chart type doesn't need new data, but changing interval does.
+    // Ideally we separate data fetch from rendering, but simple approach: fetch again.
+
+    if (!currentSymbol) return;
+
+    try {
+        // Show loading state on chart?
+
+        const response = await fetch(`${API_BASE}/stocks/${currentSymbol}?interval=${interval}`);
+        if (!response.ok) throw new Error('Failed to update chart');
+
+        const stock = await response.json();
+        renderChart(stock); // Re-render with new data
+        updateModalContent(stock); // Update price/indicators for new interval?
+        // Note: Indicators might change with interval!
+
+    } catch (error) {
+        console.error("Error updating chart:", error);
+    }
+}
+
+function renderChart(stock) {
+    const chartType = document.getElementById('chart-type').value || 'candlestick';
+
+    // Prepare Data for ApexCharts
+    // Candlestick expects: [timestamp, open, high, low, close]
+    // Line/Area expects: [timestamp, close]
+
+    const serieData = stock.history.map(h => {
+        // Parse time to timestamp
+        // Format from API: "HH:MM" (today) or "YYYY-MM-DD HH:MM"
+        // ApexCharts needs timestamp or full date string
+        let timeStr = h.time;
+        if (timeStr.length === 5) {
+            // Append today's date if it's just HH:MM
+            const today = new Date().toISOString().split('T')[0];
+            timeStr = `${today}T${timeStr}:00`;
+        }
+
+        const timestamp = new Date(timeStr).getTime();
+
+        if (chartType === 'candlestick') {
+            return {
+                x: timestamp,
+                y: [h.open, h.high, h.low, h.close]
+            };
+        } else {
+            return {
+                x: timestamp,
+                y: h.close
+            };
+        }
+    });
+
+    const options = {
+        series: [{
+            data: serieData,
+            name: 'Price'
+        }],
+        chart: {
+            type: chartType, // 'candlestick' or 'area'
+            height: 350,
+            background: 'transparent',
+            toolbar: {
+                show: false
+            }
+        },
+        theme: {
+            mode: 'dark'
+        },
+        xaxis: {
+            type: 'datetime',
+            tooltip: {
+                enabled: false
+            },
+            axisBorder: { show: false },
+            axisTicks: { show: false }
+        },
+        yaxis: {
+            tooltip: {
+                enabled: true
+            },
+            opposite: true
+        },
+        grid: {
+            borderColor: '#334155',
+            strokeDashArray: 4,
+        },
+        plotOptions: {
+            candlestick: {
+                colors: {
+                    upward: '#4ade80',
+                    downward: '#f87171'
+                }
+            }
+        },
+        stroke: {
+            width: 2,
+            colors: ['#3b82f6'] // Blue for line chart
+        },
+        fill: {
+            type: 'gradient',
+            gradient: {
+                shadeIntensity: 1,
+                opacityFrom: 0.7,
+                opacityTo: 0.9,
+                stops: [0, 90, 100]
+            }
+        },
+        dataLabels: {
+            enabled: false
+        }
+    };
+
+    if (stockChart) {
+        stockChart.destroy();
+    }
+
+    stockChart = new ApexCharts(document.querySelector("#stockChart"), options);
+    stockChart.render();
+}
+
 
 function closeDetail() {
     document.getElementById('detail-view').classList.add('hidden');
+    currentSymbol = null;
 }
 
 // Search Logic
@@ -122,18 +323,19 @@ async function executeSearch() {
     input.classList.add('opacity-50');
 
     try {
-        const response = await fetch(`${API_BASE}/stocks/${symbol}`);
+        // Default interval 15m
+        const response = await fetch(`${API_BASE}/stocks/${symbol}?interval=15m`);
         if (!response.ok) {
             throw new Error('Stock not found');
         }
         const stock = await response.json();
-        showDetail(stock); // Reuse the same detail view
+        showDetail(stock);
     } catch (error) {
         alert(`Error: ${error.message}. Please check the symbol and try again.`);
     } finally {
         input.disabled = false;
         input.classList.remove('opacity-50');
-        input.value = ''; // Optional: clear input or keep it
+        input.value = '';
     }
 }
 
@@ -144,4 +346,7 @@ function handleSearch(event) {
 }
 
 // Initial Load
-document.addEventListener('DOMContentLoaded', fetchStocks);
+document.addEventListener('DOMContentLoaded', () => {
+    fetchStocks();
+    fetchRecommendations();
+});
