@@ -1,0 +1,24 @@
+from pydantic import BaseModel
+from typing import List, Optional
+
+class StockRequest(BaseModel):
+    symbol: str
+
+class TradeSignal(BaseModel):
+    action: str  # "BUY", "SELL", "HOLD"
+    confidence: float
+    reason: str
+
+class StockAnalysis(BaseModel):
+    symbol: str
+    current_price: float
+    signal: TradeSignal
+    entry_price: float
+    target_price: float
+    stop_loss: float
+    rsi: float
+    macd: float
+    trend: str # "UP", "DOWN", "SIDEWAYS"
+
+class StockListResponse(BaseModel):
+    stocks: List[StockAnalysis]

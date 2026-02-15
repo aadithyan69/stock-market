@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Analysis Pro</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/static/style.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#0f172a',
+                        primary: '#3b82f6',
+                        secondary: '#64748b'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-900 text-white font-sans antialiased">
+    
+    <!-- Navbar -->
+    <nav class="bg-gray-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-chart-line text-blue-500 text-2xl"></i>
+            <span class="text-xl font-bold tracking-wide">StockAnalytics<span class="text-blue-500">Pro</span></span>
+        </div>
+        <div>
+            <span class="text-gray-400 text-sm"><i class="fa-regular fa-clock mr-1"></i> Market Status: <span id="market-status" class="text-green-400">Open</span></span>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-8">
+        
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold mb-2">Intraday Technical Analysis</h1>
+            <p class="text-gray-400">Real-time analysis and trade recommendations.</p>
+        </div>
+
+        <!-- Stock Cards Grid -->
+        <div id="stock-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Loading State -->
+            <div class="col-span-full text-center py-12">
+                <i class="fa-solid fa-circle-notch fa-spin text-4xl text-blue-500 mb-4"></i>
+                <p class="text-gray-400">Scanning Market...</p>
+            </div>
+        </div>
+
+        <!-- Detailed View (Modal or Section) -->
+        <div id="detail-view" class="hidden fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-50">
+            <div class="bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto relative">
+                <button onclick="closeDetail()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+                    <i class="fa-solid fa-xmark text-2xl"></i>
+                </button>
+                
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <h2 id="detail-symbol" class="text-3xl font-bold mb-1">RELIANCE</h2>
+                            <span id="detail-price" class="text-2xl font-mono text-blue-400">₹2450.00</span>
+                        </div>
+                        <div id="detail-signal-badge" class="px-4 py-2 rounded-lg font-bold bg-gray-700">
+                            NEUTRAL
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-gray-700/50 p-4 rounded-lg">
+                            <span class="text-gray-400 text-sm block mb-1">Target</span>
+                            <span id="detail-target" class="text-xl font-mono text-green-400">--</span>
+                        </div>
+                        <div class="bg-gray-700/50 p-4 rounded-lg">
+                            <span class="text-gray-400 text-sm block mb-1">Entry</span>
+                            <span id="detail-entry" class="text-xl font-mono text-blue-400">--</span>
+                        </div>
+                        <div class="bg-gray-700/50 p-4 rounded-lg">
+                            <span class="text-gray-400 text-sm block mb-1">Stop Loss</span>
+                            <span id="detail-sl" class="text-xl font-mono text-red-400">--</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold mb-4">Analysis Reasons</h3>
+                        <ul id="detail-reasons" class="list-disc list-inside text-gray-300 space-y-1">
+                            <!-- Reasons populated by JS -->
+                        </ul>
+                    </div>
+
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold mb-4">Technical Indicators</h3>
+                         <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div class="flex justify-between border-b border-gray-700 pb-2">
+                                <span class="text-gray-400">RSI (14)</span>
+                                <span id="detail-rsi" class="font-mono">--</span>
+                            </div>
+                            <div class="flex justify-between border-b border-gray-700 pb-2">
+                                <span class="text-gray-400">MACD</span>
+                                <span id="detail-macd" class="font-mono">--</span>
+                            </div>
+                             <div class="flex justify-between border-b border-gray-700 pb-2">
+                                <span class="text-gray-400">Trend</span>
+                                <span id="detail-trend" class="font-mono">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
