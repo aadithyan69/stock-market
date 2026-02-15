@@ -110,5 +110,38 @@ function closeDetail() {
     document.getElementById('detail-view').classList.add('hidden');
 }
 
+// Search Logic
+async function executeSearch() {
+    const input = document.getElementById('stock-search');
+    let symbol = input.value.trim().toUpperCase();
+
+    if (!symbol) return;
+
+    // Show simple loading or just wait
+    input.disabled = true;
+    input.classList.add('opacity-50');
+
+    try {
+        const response = await fetch(`${API_BASE}/stocks/${symbol}`);
+        if (!response.ok) {
+            throw new Error('Stock not found');
+        }
+        const stock = await response.json();
+        showDetail(stock); // Reuse the same detail view
+    } catch (error) {
+        alert(`Error: ${error.message}. Please check the symbol and try again.`);
+    } finally {
+        input.disabled = false;
+        input.classList.remove('opacity-50');
+        input.value = ''; // Optional: clear input or keep it
+    }
+}
+
+function handleSearch(event) {
+    if (event.key === 'Enter') {
+        executeSearch();
+    }
+}
+
 // Initial Load
 document.addEventListener('DOMContentLoaded', fetchStocks);

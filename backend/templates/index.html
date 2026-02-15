@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -25,8 +26,9 @@
         }
     </script>
 </head>
+
 <body class="bg-gray-900 text-white font-sans antialiased">
-    
+
     <!-- Navbar -->
     <nav class="bg-gray-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center">
         <div class="flex items-center gap-3">
@@ -34,17 +36,33 @@
             <span class="text-xl font-bold tracking-wide">StockAnalytics<span class="text-blue-500">Pro</span></span>
         </div>
         <div>
-            <span class="text-gray-400 text-sm"><i class="fa-regular fa-clock mr-1"></i> Market Status: <span id="market-status" class="text-green-400">Open</span></span>
+            <span class="text-gray-400 text-sm"><i class="fa-regular fa-clock mr-1"></i> Market Status: <span
+                    id="market-status" class="text-green-400">Open</span></span>
         </div>
     </nav>
 
     <!-- Main Content -->
     <div class="container mx-auto px-4 py-8">
-        
-        <!-- Header -->
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold mb-2">Intraday Technical Analysis</h1>
-            <p class="text-gray-400">Real-time analysis and trade recommendations.</p>
+
+        <!-- Header & Search -->
+        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold mb-2">Intraday Technical Analysis</h1>
+                <p class="text-gray-400">Real-time analysis and trade recommendations.</p>
+            </div>
+
+            <div class="relative w-full md:w-auto">
+                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
+                </div>
+                <input type="text" id="stock-search"
+                    class="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full md:w-80 pl-10 p-2.5"
+                    placeholder="Search Stock (e.g. RELIANCE, TCS)..." onkeydown="handleSearch(event)">
+                <button onclick="executeSearch()"
+                    class="absolute inset-y-0 right-0 flex items-center px-3 bg-blue-600 hover:bg-blue-700 rounded-r-lg text-white">
+                    Search
+                </button>
+            </div>
         </div>
 
         <!-- Stock Cards Grid -->
@@ -57,12 +75,13 @@
         </div>
 
         <!-- Detailed View (Modal or Section) -->
-        <div id="detail-view" class="hidden fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-50">
+        <div id="detail-view"
+            class="hidden fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-50">
             <div class="bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto relative">
                 <button onclick="closeDetail()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
                     <i class="fa-solid fa-xmark text-2xl"></i>
                 </button>
-                
+
                 <div class="p-6">
                     <div class="flex justify-between items-start mb-6">
                         <div>
@@ -88,7 +107,7 @@
                             <span id="detail-sl" class="text-xl font-mono text-red-400">--</span>
                         </div>
                     </div>
-                    
+
                     <div class="mb-6">
                         <h3 class="text-lg font-semibold mb-4">Analysis Reasons</h3>
                         <ul id="detail-reasons" class="list-disc list-inside text-gray-300 space-y-1">
@@ -98,7 +117,7 @@
 
                     <div class="mb-6">
                         <h3 class="text-lg font-semibold mb-4">Technical Indicators</h3>
-                         <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div class="grid grid-cols-2 gap-4 text-sm">
                             <div class="flex justify-between border-b border-gray-700 pb-2">
                                 <span class="text-gray-400">RSI (14)</span>
                                 <span id="detail-rsi" class="font-mono">--</span>
@@ -107,7 +126,7 @@
                                 <span class="text-gray-400">MACD</span>
                                 <span id="detail-macd" class="font-mono">--</span>
                             </div>
-                             <div class="flex justify-between border-b border-gray-700 pb-2">
+                            <div class="flex justify-between border-b border-gray-700 pb-2">
                                 <span class="text-gray-400">Trend</span>
                                 <span id="detail-trend" class="font-mono">--</span>
                             </div>
@@ -121,4 +140,5 @@
 
     <script src="/static/script.js"></script>
 </body>
+
 </html>

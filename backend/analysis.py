@@ -4,33 +4,13 @@ import ta
 from models import StockAnalysis, TradeSignal
 
 # Default list of stocks to scan (Major US/Indian stocks mix for demo)
-# Using NSE stocks since user name suggests India (Aadithyan), but yfinance format is STOCK.NS
 STOCKS_TO_SCAN = [
     "RELIANCE.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS", "ICICIBANK.NS",
     "SBIN.NS", "BHARTIARTL.NS", "ITC.NS", "HINDUNILVR.NS", "LICI.NS"
 ]
 
-def get_stock_data(symbol: str, period="5d", interval="15m"):
-    try:
-        if not symbol.endswith(".NS") and not symbol.endswith(".BO"):
-             # Basic check, might need better logic if user inputs US stocks
-             pass
-             
-        ticker = yf.Ticker(symbol)
-        df = ticker.history(period=period, interval=interval)
-        
-        if df.empty:
-            return None
-            
-        return df
-    except Exception as e:
-        print(f"Error fetching data for {symbol}: {e}")
-        return None
-
-def analyze_stock(symbol: str) -> StockAnalysis:
-    df = get_stock_data(symbol)
-    
-    if df is None or len(df) < 20:
+def analyze_stock_df(symbol: str, df: pd.DataFrame) -> StockAnalysis:
+    if df.empty or len(df) < 20:
         return StockAnalysis(
             symbol=symbol,
             current_price=0.0,
@@ -67,8 +47,6 @@ def analyze_stock(symbol: str) -> StockAnalysis:
     macd_val = last_row['macd']
     macd_sig = last_row['macd_signal']
     atr = last_row['atr']
-    upper_band = last_row['bb_upper']
-    lower_band = last_row['bb_lower']
     
     # Generate Signal
     action = "HOLD"
@@ -85,14 +63,11 @@ def analyze_stock(symbol: str) -> StockAnalysis:
     if macd_val > macd_sig:
         if action == "BUY":
             reason.append("MACD Bullish Crossover")
-        elif action == "HOLD":
-            # Weak buy signal
-             pass 
     elif macd_val < macd_sig:
         if action == "SELL":
             reason.append("MACD Bearish Crossover")
 
-    # Determine trend (Price vs SMA 50 or just simple direction)
+    # Determine trend
     sma50 = ta.trend.sma_indicator(df['Close'], window=50).iloc[-1]
     trend = "UP" if current_price > sma50 else "DOWN"
 
@@ -128,7 +103,50 @@ def analyze_stock(symbol: str) -> StockAnalysis:
 
 def analyze_market():
     results = []
-    for stock in STOCKS_TO_SCAN:
-        analysis = analyze_stock(stock)
-        results.append(analysis)
+    try:
+        # Bulk download
+        # period='5d' to get enough data for indicators (SMA50 might need more, let's use 1mo to be safe for SMA50 on 15m?)
+        # 15m interval limit is 60 days
+        tickers_str = " ".join(STOCKS_TO_SCAN)
+        data = yf.download(tickers_str, period="5d", interval="15m", group_by='ticker', threads=True)
+        
+        for symbol in STOCKS_TO_SCAN:
+            try:
+                stock_df = data[symbol].copy()
+                # Drop rows with NaN in Close which might happen if tickers have different trading hours?
+                # Usually fine for NSE set
+                stock_df.dropna(subset=['Close'], inplace=True)
+                analysis = analyze_stock_df(symbol, stock_df)
+                results.append(analysis)
+            except Exception as e:
+                print(f"Error analyzing {symbol}: {e}")
+                
+    except Exception as e:
+         print(f"Bulk download failed: {e}")
+         return []
+         
     return results
+
+def analyze_single_stock(symbol: str):
+     # Fallback/Single stock analysis
+     try:
+        # Use yf.download for consistency
+        df = yf.download(symbol, period="5d", interval="15m", progress=False)
+        
+        # Check if df is multi-index (happens if symbol is list or sometimes with recent yfinance)
+        if isinstance(df.columns, pd.MultiIndex):
+             # If level 1 is ticker, likely we just need level 0
+             # But check if there's only one ticker level
+             if len(df.columns.levels[1]) == 1:
+                  df.columns = df.columns.droplevel(1)
+             else:
+                  # If passing symbol list, this logic would need to change, but here it's single stock
+                  pass
+             
+        if df.empty:
+            return None
+            
+        return analyze_stock_df(symbol, df)
+     except Exception as e:
+         print(f"Error fetching {symbol}: {e}")
+         return None
